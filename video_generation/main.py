@@ -18,12 +18,15 @@ class GenerateVideo:
         return
 
     def generate_avatar(self):
+        # using heygen api to generate avatar video
+        # await until generated
         return
 
     def retrieve_caption(self):
         return
 
     def generate_keywords(self):
+        # use script and nltk to retrieve keywords from text
         return
 
     def generate_text_video(self):
