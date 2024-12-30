@@ -49,27 +49,47 @@ slide_content = [
 
 
 class TextVideoGenerator:
-    def __init__(self, width, height, duration, slide_content, font_size=70):
+    def __init__(
+        self,
+        width,
+        height,
+        duration,
+        slide_content,
+        font_size=70,
+        text_color="black",
+        text_bg_color=(200, 200, 200),  # Light gray background for text
+        text_bg_padding=(20, 10),  # Horizontal and vertical padding
+    ):
         """
-        init
+        Initialize the video generator with customizable styling options
+
+        Args:
+            width: Video width in pixels
+            height: Video height in pixels
+            duration: Video duration in seconds
+            slide_content: List of dictionaries containing text content and timing
+            font_size: Base font size (will be scaled relative to video width)
+            text_color: Color of the text
+            text_bg_color: Background color behind text
+            text_bg_padding: Tuple of (horizontal, vertical) padding around text
         """
         self.width = width
         self.height = height
         self.duration = duration
-        # Increased font size to 5% of width (was 3%)
-        self.font_size = int(width * 0.05)
+        self.font_size = int(width * 0.05)  # 5% of width
         self.slide_content = slide_content
         self.text_clips = []
-        self.letter_duration = 0.2
-        self.letter_fade_duration = 0.15
-        self.quarter_width = width // 2
-        self.quarter_height = height // 2
-        # Reduced character limit to account for larger font
+        self.text_color = text_color
+        self.text_bg_color = text_bg_color
+        self.text_bg_padding = text_bg_padding
         self.char_limit = 20
+
+        # Define the upper half zone for text placement
+        self.text_zone = {"top": 0, "bottom": height // 2, "left": 0, "right": width}
 
     def wrap_text(self, text):
         """
-        Wrap text at character limit, preserving bullet points
+        Wrap text at character limit while preserving formatting
         """
         if text.startswith("•"):
             indent = "  "
@@ -82,33 +102,82 @@ class TextVideoGenerator:
             )
             return "• " + wrapped
         else:
-            # Make headers slightly longer than bullet points
             return textwrap.fill(text, width=self.char_limit + 5)
 
-    @staticmethod
-    def get_starting_position(width, height, margin_percentage=0.05):
+    def create_text_with_background(self, text, start_time, duration):
         """
-        Get the starting position for the text in the top left quarter
-        """
-        x = int(width * margin_percentage)
-        y = int(height * margin_percentage)
-        return x, y
+        Create a text clip with a background color and padding
 
-    def create_background(self, duration, color):
-        return ColorClip(
-            size=(self.width, self.height),
-            color=color,
-            duration=duration,
+        Args:
+            text: The text to display
+            start_time: When the text should appear
+            duration: How long the text should stay
+
+        Returns:
+            A composite clip containing the text and its background
+        """
+        # Create the main text clip
+        text_clip = TextClip(
+            text,
+            fontsize=self.font_size,
+            color=self.text_color,
+            font="Arial",
+            method="label",
         )
 
+        # Create a slightly larger background clip
+        bg_width = text_clip.w + (2 * self.text_bg_padding[0])
+        bg_height = text_clip.h + (2 * self.text_bg_padding[1])
+        bg_clip = ColorClip(
+            size=(bg_width, bg_height), color=self.text_bg_color
+        ).set_duration(duration)
+
+        # Combine text and background
+        composite = CompositeVideoClip(
+            [
+                bg_clip,
+                text_clip.set_position(
+                    (self.text_bg_padding[0], self.text_bg_padding[1])
+                ),
+            ]
+        )
+
+        return composite.set_start(start_time).set_duration(duration).crossfadein(0.5)
+
+    def calculate_vertical_layout(self, wrapped_lines, line_spacing):
+        """
+        Calculate the total height needed for all lines and their starting y-position
+        to achieve vertical centering in the upper half
+        """
+        total_height = len(wrapped_lines) * line_spacing
+        available_height = self.text_zone["bottom"] - self.text_zone["top"]
+        start_y = self.text_zone["top"] + (available_height - total_height) // 2
+        return start_y
+
     def create_video(self, output_path):
-        background = self.create_background(self.duration, (255, 255, 255))
-        x, y = self.get_starting_position(self.width, self.height)
-        # Increased line spacing to 1.5 times font size (was 1.2)
+        """
+        Create the final video with centered text in the upper half
+        """
+        # Create white background
+        background = ColorClip(
+            size=(self.width, self.height),
+            color=(255, 255, 255),
+            duration=self.duration,
+        )
+
         line_spacing = self.font_size * 1.5
 
         for slide in self.slide_content:
-            current_y = y
+            # First, collect all wrapped lines for this slide to calculate total height
+            all_wrapped_lines = []
+            for line in slide["lines"]:
+                wrapped_text = self.wrap_text(line)
+                all_wrapped_lines.extend(wrapped_text.split("\n"))
+
+            # Calculate starting y-position for vertical centering
+            start_y = self.calculate_vertical_layout(all_wrapped_lines, line_spacing)
+            current_y = start_y
+
             for i, line in enumerate(slide["lines"]):
                 start_time = slide["start_times"][i]
                 duration = float(slide["end_time"]) - float(start_time)
@@ -116,31 +185,21 @@ class TextVideoGenerator:
                 wrapped_text = self.wrap_text(line)
                 wrapped_lines = wrapped_text.split("\n")
 
-                for j, wrapped_line in enumerate(wrapped_lines):
-                    line_y = current_y + (j * line_spacing)
-
-                    if line_y + self.font_size > self.quarter_height:
-                        continue
-
-                    font_weight = "regular"
-
-                    temp_clip = (
-                        TextClip(
-                            wrapped_line,
-                            fontsize=self.font_size,
-                            color="black",
-                            font="Arial",
-                            method="label",
-                        )
-                        .set_position((x, line_y))
-                        .set_start(start_time)
-                        .set_duration(duration)
-                        .crossfadein(0.5)
+                for wrapped_line in wrapped_lines:
+                    # Create text clip with background
+                    temp_clip = self.create_text_with_background(
+                        wrapped_line, start_time, duration
                     )
-                    self.text_clips.append(temp_clip)
 
-                # Increased spacing between main items
-                current_y += line_spacing * (len(wrapped_lines) + 0.8)
+                    # Center horizontally and position vertically
+                    x_pos = (self.width - temp_clip.w) // 2
+                    temp_clip = temp_clip.set_position((x_pos, current_y))
+
+                    self.text_clips.append(temp_clip)
+                    current_y += line_spacing
+
+                # Add extra spacing between main items
+                current_y += line_spacing * 0.8
 
         final_video = CompositeVideoClip([background] + self.text_clips)
 
@@ -152,6 +211,8 @@ class TextVideoGenerator:
             preset="medium",
             threads=4,
         )
+
+        # Clean up resources
         if final_video is not None:
             final_video.close()
         if background is not None:
@@ -159,7 +220,14 @@ class TextVideoGenerator:
 
 
 if __name__ == "__main__":
+    # Example usage with custom styling
     generator = TextVideoGenerator(
-        width=1080, height=1920, duration=66, slide_content=slide_content
+        width=1080,
+        height=1920,
+        duration=67,
+        slide_content=slide_content,
+        text_color="white",  # White text
+        text_bg_color=(0, 0, 139),  # Dark blue background
+        text_bg_padding=(30, 15),  # Comfortable padding around text
     )
     generator.create_video("text_animations.mp4")
