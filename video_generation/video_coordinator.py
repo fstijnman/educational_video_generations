@@ -152,82 +152,86 @@ if __name__ == "__main__":
     # Sample content (previously defined)
     slide_content = [
         {
-            "start_times": [1, 5],
-            "end_time": 8,
+            "start_times": [0, 2, 6],
+            "end_time": 13,
             "lines": [
-                "systemic",
-                "dysfunctional",
+                "vessel wall weakening",
+                "balloon outward bulge",
+                "brain aorta artery",
             ],
         },
         {
-            "start_times": [9, 14],
-            "end_time": 18,
+            "start_times": [13, 16, 20],
+            "end_time": 26,
             "lines": [
-                "mailbox",
-                "signals",
+                "garden hose weak",
+                "water pressure burst",
+                "vessel balloon rupture",
             ],
         },
         {
-            "start_times": [18, 20, 25],
-            "end_time": 29,
+            "start_times": [29, 32, 36],
+            "end_time": 39,
             "lines": [
-                "primary discomfort",
-                "secondary manifestations",
-                "tertiary effects",
+                "brain aneurysm headaches",
+                "vision problems drooping",
+                "back abdominal pain",
             ],
         },
         {
-            "start_times": [29, 35],
-            "end_time": 37,
+            "start_times": [49, 51, 57],
+            "end_time": 62,
             "lines": [
-                "percentage",
-                "risk factors",
+                "over fifty common",
+                "blood pressure smokers",
+                "gender specific differences",
             ],
         },
         {
-            "start_times": [37, 44, 50],
-            "end_time": 55,
+            "start_times": [62, 65, 67],
+            "end_time": 75,
             "lines": [
-                "primary testing methods",
-                "key indicators",
-                "secondary evaluation methods",
-            ],
-        },
-        {
-            "start_times": [55, 63],
-            "end_time": 67,
-            "lines": [
-                "thresholds",
-                "related factors",
+                "ct scan mri",
+                "angiography blood vessels",
+                "screening detect early",
             ],
         },
     ]
 
     image_content = [
         {
-            "start_time": 1,
-            "end_time": 8,
-            "image_path": "video_generation/data/image_1.png",
+            "start_time": 0,
+            "end_time": 13,
+            "image_path": "video_generation/data/definition.png",
         },
         {
-            "start_time": 8,
-            "end_time": 30,
-            "image_path": "video_generation/data/image_2.png",
+            "start_time": 13,
+            "end_time": 26,
+            "image_path": "video_generation/data/analogy.png",
         },
         {
-            "start_time": 30,
-            "end_time": 67,
-            "image_path": "video_generation/data/image_3.png",
+            "start_time": 26,
+            "end_time": 47,
+            "image_path": "video_generation/data/symptoms.png",
+        },
+        {
+            "start_time": 47,
+            "end_time": 62,
+            "image_path": "video_generation/data/epidemiology.png",
+        },
+        {
+            "start_time": 62,
+            "end_time": 75,
+            "image_path": "video_generation/data/diagnostic.png",
         },
     ]
-
     # Create and run the coordinator
     coordinator = VideoCoordinator(
         width=1080,
         height=1920,
         slide_content=slide_content,
         image_content=image_content,
-        header_text="Systemic disorder",
+        header_text="Aneurysms",
     )
 
     # Generate the complete video

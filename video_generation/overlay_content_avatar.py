@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip
 
-
 class VideoProcessor:
     def __init__(self, foreground_path, background_path, output_path):
         """
@@ -22,17 +21,29 @@ class VideoProcessor:
         self.bg_cap = cv2.VideoCapture(background_path)
 
         # Get video properties
-        self.fps = self.fg_cap.get(cv2.CAP_PROP_FPS)
+        self.fg_fps = self.fg_cap.get(cv2.CAP_PROP_FPS)
+        self.bg_fps = self.bg_cap.get(cv2.CAP_PROP_FPS)
+        self.fg_frames = int(self.fg_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.bg_frames = int(self.bg_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        # Calculate timing factors
+        self.fg_duration = self.fg_frames / self.fg_fps
+        self.bg_duration = self.bg_frames / self.bg_fps
+
+        # Use background video's fps if it's longer, otherwise use foreground fps
+        self.fps = self.bg_fps if self.bg_duration > self.fg_duration else self.fg_fps
+
+        # Get dimensions
         self.width = int(self.fg_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.fg_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         # Initialize video writer
-        self.fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         self.out = cv2.VideoWriter(
-            "temp_output.mp4",  # Temporary file without audio
+            'temp_output.mp4',  # Temporary file without audio
             self.fourcc,
             self.fps,
-            (self.width, self.height),
+            (self.width, self.height)
         )
 
     def process_frame(self, fg_frame, bg_frame):
@@ -73,7 +84,18 @@ class VideoProcessor:
         Process the entire videos and combine them with audio.
         """
         try:
-            while True:
+            frame_count = 0
+            total_frames = min(self.fg_frames, self.bg_frames)
+
+            while frame_count < total_frames:
+                # Calculate the correct frame positions based on timing
+                fg_frame_pos = int((frame_count / total_frames) * self.fg_frames)
+                bg_frame_pos = int((frame_count / total_frames) * self.bg_frames)
+
+                # Set frame positions
+                self.fg_cap.set(cv2.CAP_PROP_POS_FRAMES, fg_frame_pos)
+                self.bg_cap.set(cv2.CAP_PROP_POS_FRAMES, bg_frame_pos)
+
                 # Read frames from both videos
                 fg_ret, fg_frame = self.fg_cap.read()
                 bg_ret, bg_frame = self.bg_cap.read()
@@ -81,6 +103,8 @@ class VideoProcessor:
                 # Check if we've reached the end of either video
                 if not fg_ret or not bg_ret:
                     break
+
+                frame_count += 1
 
                 # Process and combine frames
                 combined_frame = self.process_frame(fg_frame, bg_frame)
@@ -116,7 +140,9 @@ class VideoProcessor:
 
             # Write the final video with audio
             final_video.write_videofile(
-                self.output_path, codec="libx264", audio_codec="aac"
+                self.output_path,
+                codec='libx264',
+                audio_codec='aac'
             )
 
             # Close the clips
@@ -129,7 +155,6 @@ class VideoProcessor:
         finally:
             # Clean up temporary files
             import os
-
             if os.path.exists("temp_output.mp4"):
                 os.remove("temp_output.mp4")
 
@@ -143,16 +168,14 @@ class VideoProcessor:
         cv2.destroyAllWindows()
 
         import os
-
         if os.path.exists("temp_output.mp4"):
             os.remove("temp_output.mp4")
-
 
 # Example usage
 if __name__ == "__main__":
     processor = VideoProcessor(
         foreground_path="avatar.mp4",
         background_path="final_video.mp4",
-        output_path="combined_output.mp4",
+        output_path="combined_output.mp4"
     )
     processor.combine_videos()

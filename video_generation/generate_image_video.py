@@ -14,7 +14,6 @@ class ImageVideoGenerator:
         transition_duration=0.5,
         background_color=(255, 255, 255),
     ):
-        # ... [previous initialization code remains the same] ...
         self.width = width
         self.height = height // 2
         self.full_height = height
@@ -26,7 +25,6 @@ class ImageVideoGenerator:
         self.y_offset = self.height
 
     def load_and_resize_image(self, image_path):
-        # ... [previous image loading code remains the same] ...
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image not found: {image_path}")
 
